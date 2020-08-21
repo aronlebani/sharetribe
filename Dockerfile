@@ -84,7 +84,7 @@ ENV RAILS_ENV development
 
 USER app
 
-RUN bundle install
+RUN bundle install --deployment --without test,development
 
 COPY package.json /opt/app/
 COPY client/package.json /opt/app/client/
