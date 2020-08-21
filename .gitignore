@@ -73,3 +73,7 @@ client/.vimrc
 storage/
 
 storage/
+
+#db
+sharetribe-db
+config/credentials

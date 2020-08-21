@@ -61,10 +61,11 @@ RUN curl -sfSL \
 # Install:
 # - nginx - used to serve maintenance mode page
 # - MySQL 5.7 repo and client libs
+# - Vim - to make life a little easier
 COPY script/setup-mysql-apt-repo.sh /root/
 RUN apt-get install -y nginx \
   && /root/setup-mysql-apt-repo.sh \
-  && apt-get install -y libmysqlclient-dev
+  && apt-get install -y mysql-community-client vim
 
 # Install latest bundler
 ENV BUNDLE_BIN=
@@ -79,22 +80,25 @@ WORKDIR /opt/app
 COPY Gemfile /opt/app
 COPY Gemfile.lock /opt/app
 
-ENV RAILS_ENV production
+ENV RAILS_ENV development
 
 USER app
 
-RUN bundle install --deployment --without test,development
+RUN bundle install
 
 COPY package.json /opt/app/
 COPY client/package.json /opt/app/client/
 
-ENV NODE_ENV production
+ENV NODE_ENV development
 ENV NPM_CONFIG_LOGLEVEL error
-ENV NPM_CONFIG_PRODUCTION true
+ENV NPM_CONFIG_PRODUCTION false
 
 RUN npm install
 
 COPY . /opt/app
+
+RUN mkdir /home/app/.aws
+COPY ./config/credentials /home/app/.aws/
 
 EXPOSE 3000
 
@@ -124,3 +128,28 @@ USER app
 # Otherwise, assets will be compiled with `rake assets:precompile`.
 # Useful for caching assets between builds.
 RUN script/prepare-assets.sh
+
+
+#
+# Database
+#
+
+COPY ./config/config.yml /opt/app/config/
+COPY ./config/database.yml /opt/app/config/
+
+# Create and initialise the database
+RUN bundle exec rake db:create db:structure:load
+
+# Run Sphinx index and start daemon
+# RUN bundle exec rake ts:index
+# RUN bundle exec rake ts:start
+
+#
+# Server
+#
+
+# Start development server
+# RUN foreman start -f Procfile.static
+
+# Invoke delayed job worker
+# RUN bundle exec rake jobs:work &
